@@ -22,7 +22,7 @@ ansible:
 
 # Update Prod Hosts (Distribution Specific)
 update-prod-deb:
-    @ansible-playbook ansible/playbooks/system/srv_update.yml -i inventory/infra/prod/hosts.yml --tags deb_srv
+    cd ansible ansible-playbook playbooks/system/srv_update.yml -i inventory/infra/prod/hosts.yml --tags deb_srv
 
 update-prod-rpm:
     @ansible-playbook ansible/playbooks/system/srv_update.yml -i inventory/infra/prod/hosts.yml --tags rpm_srv
