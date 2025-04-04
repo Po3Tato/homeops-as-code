@@ -1,24 +1,27 @@
 # `just ansible` to See all commands
 @ansible:
-    @echo "Available Ansible commands:"
-    @echo ""
-    @echo "System Updates:"
-    @echo "  just update-prod-deb     - Update Debian/Ubuntu production hosts"
-    @echo "  just update-prod-rpm     - Update RHEL/Rocky production hosts"
-    @echo "  just update-prod         - Update all production hosts"
-    @echo "  just update ENV [FLAGS]  - Update hosts with optional flags"
-    @echo ""
-    @echo "Docker Installation:"
-    @echo "  just docker-install ENV  - Install Docker on specified environment"
-    @echo "  just docker-status ENV   - Check Docker status on hosts"
-    @echo ""
-    @echo "Environments (ENV):"
-    @echo "  prod | dev | vps"
-    @echo ""
-    @echo "Examples:"
-    @echo "  just update prod"
-    @echo "  just update dev '--tags deb_srv'"
-    @echo "  just docker-install prod"
+    #!/usr/bin/env sh
+    cat << 'END'
+Available Ansible commands:
+
+System Updates:
+  just update-prod-deb     - Update Debian/Ubuntu production hosts
+  just update-prod-rpm     - Update RHEL/Rocky production hosts
+  just update-prod         - Update all production hosts
+  just update ENV [FLAGS]  - Update hosts with optional flags
+
+Docker Installation:
+  just docker-install ENV  - Install Docker on specified environment
+  just docker-status ENV   - Check Docker status on hosts
+
+Environments (ENV):
+  prod | dev | vps
+
+Examples:
+  just update prod
+  just update dev '--tags deb_srv'
+  just docker-install prod
+END
 
 # Update Prod Hosts(Distribution Specific)
 @update-prod-deb:
