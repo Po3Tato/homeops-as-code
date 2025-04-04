@@ -1,101 +1,51 @@
-#!/usr/bin/env -S just --justfile
+# `just ansible` to See all commands
+@ansible:
+    @echo "Available Ansible commands:"
+    @echo ""
+    @echo "System Updates:"
+    @echo "  just update-prod-deb     - Update Debian/Ubuntu production hosts"
+    @echo "  just update-prod-rpm     - Update RHEL/Rocky production hosts"
+    @echo "  just update-prod         - Update all production hosts"
+    @echo "  just update ENV [FLAGS]  - Update hosts with optional flags"
+    @echo ""
+    @echo "Docker Installation:"
+    @echo "  just docker-install ENV  - Install Docker on specified environment"
+    @echo "  just docker-status ENV   - Check Docker status on hosts"
+    @echo ""
+    @echo "Environments (ENV):"
+    @echo "  prod | dev | vps"
+    @echo ""
+    @echo "Examples:"
+    @echo "  just update prod"
+    @echo "  just update dev '--tags deb_srv'"
+    @echo "  just docker-install prod"
 
-# Variables for directories with new repository structure
-terra_dir := "/home/$USER/infra/homeops-as-code/terraform"
-do_prod_dir := "/home/$USER/infra/homeops-as-code/terraform/vultr/prod"
-ansible_dir := "/home/$USER/infra/homeops-as-code/ansible"
+# Update Prod Hosts(Distribution Specific)
+@update-prod-deb:
+    ansible-playbook playbooks/system/srv_update.yml -i inventory/infra/prod/hosts.yml --tags deb_srv
 
-# Terraform Base Commands
-init:
-    cd {{ terra_dir }} && terraform init
+@update-prod-rpm:
+    ansible-playbook playbooks/system/srv_update.yml -i inventory/infra/prod/hosts.yml --tags rpm_srv
 
-# Combined apply/destroy commands
-tf-apply TYPE="prod":
-    @cd {{ if TYPE == "dry" { terra_dir } else { do_prod_dir } }} && terraform apply -auto-approve
+# Update All (Doesn't matter Distribution)
+@update-prod:
+    ansible-playbook playbooks/system/srv_update.yml -i inventory/infra/prod/hosts.yml
 
-tf-destroy TYPE="prod":
-    @echo -e "\n######################\n\n\033[1;31mDestroying server...\033[0m\n\n######################\n"
-    @cd {{ if TYPE == "dry" { terra_dir } else { do_prod_dir } }} && terraform destroy -auto-approve
+# Allow tag to be passed as an argument
+@update ENV *FLAGS='':
+    ansible-playbook playbooks/system/srv_update.yml -i inventory/infra/{{ENV}}/hosts.yml {{FLAGS}}
 
-# Combined Ansible commands
-ansible-run HOST PLAYBOOK *TAGS:
-    cd {{ ansible_dir }} && ansible-playbook {{ PLAYBOOK }} --limit {{ HOST }} {{ if TAGS != "" { "--tags " + TAGS } else { "" } }} --ask-become-pass
+# Docker commands
+@docker-install ENV:
+    ansible-playbook playbooks/docker/docker_install.yml -i inventory/infra/{{ENV}}/hosts.yml
 
-# Unified system update command
-update HOSTS="deb_srv,vps_srv,in_srv" TAGS="deb_srv" VAULT="true":
-    cd {{ ansible_dir }} && ansible-playbook playbooks/sys_update.yml \
-    {{ if TAGS != "" { "--tags " + TAGS } else { "" } }} \
-    {{ if HOSTS != "" { "--limit " + HOSTS } else { "" } }} \
-    {{ if VAULT == "true" { "--ask-vault-pass --extra-vars \"@got_milk.yml\"" } else { "" } }}
+@docker-status ENV:
+    ansible all -i inventory/infra/{{ENV}}/hosts.yml -m shell -a "systemctl status docker"
 
-# Streamlined VPS deployment
-deploy-vps:
-    @just tf-apply
-    @echo -e "\n#####################################\n\n\033[1;32mWaiting for Tailscale to start up... \033[0m\n\n#####################################\n"
-    @sleep 260
-    @cd {{ ansible_dir }} && ansible-playbook playbooks/docker_install.yml --limit vps_srv
+# List all inventory hosts
+@ansible-list ENV:
+    ansible-inventory -i inventory/infra/{{ENV}}/hosts.yml --list
 
-# Combined validation
-validate:
-    cd {{ do_prod_dir }} && terraform validate
-    cd {{ ansible_dir }} && ansible-playbook --syntax-check sys_update.yml
-
-status:
-    cd {{ terra_dir }} && terraform state list
-
-## Clone VM
-clone-vm:
-    #!/usr/bin/env bash
-
-    read -p "Server IP: " server
-    read -p "Base VM ID to clone [7000]: " base_id
-    base_id=${base_id:-7000}
-    read -p "Number of nodes to create (1-5): " num_nodes
-    num_nodes=${num_nodes:-1}
-
-    if ((num_nodes < 1 || num_nodes > 5)); then
-        echo "Invalid number of nodes. Please choose between 1 and 5."
-        exit 1
-    fi
-
-    read -p "Starting New VM ID [101]: " start_id
-    start_id=${start_id:-101}
-    read -p "Base VM Name Prefix: " vm_prefix
-    read -p "Bridge [vmbr0]: " bridge
-    bridge=${bridge:-vmbr0}
-    read -p "VLAN Tag (optional): " vlan_tag
-
-    vm_prefix=$(echo "$vm_prefix" | tr '_' '-')
-
-    for ((i = 0; i < num_nodes; i++)); do
-        new_id=$((start_id + i))
-        formatted_id=$(printf "%02d" $new_id)
-        vm_name="${vm_prefix}${formatted_id}"
-    
-        echo -e "\nCommands to run on $server:"
-        echo "qm clone $base_id $new_id --name $vm_name"
-        echo "qm set $new_id --net0 virtio,bridge=$bridge"
-        if [[ -n $vlan_tag ]]; then
-            echo "qm set $new_id --net0 virtio,bridge=$bridge,tag=$vlan_tag"
-        fi
-    done
-
-    read -p "Execute? (y/n): " confirm
-    if [[ $confirm =~ ^[Yy]$ ]]; then
-        for ((i = 0; i < num_nodes; i++)); do
-            new_id=$((start_id + i))
-            formatted_id=$(printf "%02d" $new_id)
-            vm_name="${vm_prefix}${formatted_id}"
-
-            cmd="qm clone $base_id $new_id --name $vm_name && qm set $new_id --net0 virtio,bridge=$bridge"
-            if [[ -n $vlan_tag ]]; then
-                cmd="$cmd,tag=$vlan_tag"
-            fi
-
-            if ssh root@$server "$cmd"; then
-                echo "Node $vm_name ($new_id) created successfully."
-            else
-                echo "Failed to create node $vm_name ($new_id)."
-            fi
-        done
-    fi
+# Only show system update status
+@update-status ENV:
+    ansible-playbook playbooks/system/srv_update.yml -i inventory/infra/{{ENV}}/hosts.yml --tags status
