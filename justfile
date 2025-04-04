@@ -8,13 +8,13 @@ System Updates:
   just update-prod-deb     - Update Debian/Ubuntu production hosts
   just update-prod-rpm     - Update RHEL/Rocky production hosts
   just update-prod         - Update all production hosts
-  just update ENV [FLAGS]  - Update hosts with optional flags
+  just update ENV FLAGS    - Update hosts with optional flags
 
 Docker Installation:
   just docker-install ENV  - Install Docker on specified environment
   just docker-status ENV   - Check Docker status on hosts
 
-Environments (ENV):
+Environments:
   prod | dev | vps
 
 Examples:
