@@ -1,5 +1,5 @@
 # Ansible inventory files
-ansible/inventory/infra/
+# ansible/inventory/infra/
 !ansible/inventory/example/
 
 # Terraform/OpenTofu files
