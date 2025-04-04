@@ -1,0 +1,82 @@
+---
+- hosts: all
+  become: true
+  gather_facts: yes
+  vars:
+    reboot_is_required: false
+
+  tasks:
+    # Package Updates
+    - name: Update Debian/Ubuntu Servers (apt)
+      tags: package_update, deb_srv
+      ansible.builtin.apt:
+        update_cache: yes
+        upgrade: dist
+        cache_valid_time: 3600
+      when: ansible_distribution in ['Debian', 'Ubuntu']
+
+    - name: Update RHEL-based Servers (dnf)
+      tags: package_update, rpm_srv
+      ansible.builtin.dnf:
+        name: "*"
+        state: latest
+        update_cache: yes
+      when: ansible_distribution in ['Rocky', 'CentOS', 'RedHat']
+
+    # Reboot Check
+    - name: Check for reboot signal file (Debian/Ubuntu)
+      tags: reboot_check, deb_srv
+      ansible.builtin.stat:
+        path: /var/run/reboot-required
+      register: reboot_required_file_stat
+      when: ansible_distribution in ['Debian', 'Ubuntu']
+
+    - name: Check if services need restarting (RHEL-based)
+      tags: reboot_check, rpm_srv
+      ansible.builtin.command: needs-restarting -r
+      register: needs_restarting_result
+      failed_when: false
+      changed_when: false
+      when: ansible_distribution in ['Rocky', 'CentOS', 'RedHat']
+
+    - name: Set reboot_is_required fact based on OS checks
+      tags: reboot_check
+      ansible.builtin.set_fact:
+        reboot_is_required: true
+      when: >
+        (ansible_distribution in ['Debian', 'Ubuntu'] and
+        reboot_required_file_stat.stat is defined and
+        reboot_required_file_stat.stat.exists)
+        or
+        (ansible_distribution in ['Rocky', 'CentOS', 'RedHat'] and
+        needs_restarting_result.rc == 1)
+
+    # Display Results
+    - name: Identify hosts requiring reboot
+      tags: status
+      ansible.builtin.set_fact:
+        hosts_needing_reboot: "{{ ansible_play_hosts_all | select('extract', hostvars, 'reboot_is_required') | list }}"
+      run_once: true
+      delegate_to: localhost
+
+    - name: Display hosts needing reboot
+      tags: status
+      ansible.builtin.debug:
+        msg: |
+          --------------------------------------------------
+          The following servers require a reboot after updates:
+          {% for host in hosts_needing_reboot %}
+          - {{ host }}
+          {% endfor %}
+          --------------------------------------------------
+      run_once: true
+      delegate_to: localhost
+      when: hosts_needing_reboot | length > 0
+
+    - name: Display when no reboots are needed
+      tags: status
+      ansible.builtin.debug:
+        msg: "No systems require a reboot."
+      run_once: true
+      delegate_to: localhost
+      when: hosts_needing_reboot | length == 0
