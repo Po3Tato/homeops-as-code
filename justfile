@@ -22,22 +22,22 @@ ansible:
 
 # Update Prod Hosts (Distribution Specific)
 update-prod-deb:
-    @ansible-playbook playbooks/system/srv_update.yml -i inventory/infra/prod/hosts.yml --tags deb_srv
+    @ansible-playbook ansible/playbooks/system/srv_update.yml -i inventory/infra/prod/hosts.yml --tags deb_srv
 
 update-prod-rpm:
-    @ansible-playbook playbooks/system/srv_update.yml -i inventory/infra/prod/hosts.yml --tags rpm_srv
+    @ansible-playbook ansible/playbooks/system/srv_update.yml -i inventory/infra/prod/hosts.yml --tags rpm_srv
 
 # Update All Production Hosts
 update-prod:
-    @ansible-playbook playbooks/system/srv_update.yml -i inventory/infra/prod/hosts.yml
+    @ansible-playbook ansible/playbooks/system/srv_update.yml -i inventory/infra/prod/hosts.yml
 
 # Update Any Environment with Optional Flags
 update ENV *FLAGS='':
-    @ansible-playbook playbooks/system/srv_update.yml -i inventory/infra/{{ENV}}/hosts.yml {{FLAGS}}
+    @ansible-playbook ansible/playbooks/system/srv_update.yml -i inventory/infra/{{ENV}}/hosts.yml {{FLAGS}}
 
 # Docker Installation
 docker-install ENV:
-    @ansible-playbook playbooks/docker/docker_install.yml -i inventory/infra/{{ENV}}/hosts.yml
+    @ansible-playbook ansible/playbooks/docker/docker_install.yml -i inventory/infra/{{ENV}}/hosts.yml
 
 # Check Docker Status
 docker-status ENV:
@@ -49,4 +49,4 @@ ansible-list ENV:
 
 # Show Update Status Only
 update-status ENV:
-    @ansible-playbook playbooks/system/srv_update.yml -i inventory/infra/{{ENV}}/hosts.yml --tags status
+    @ansible-playbook ansible/playbooks/system/srv_update.yml -i inventory/infra/{{ENV}}/hosts.yml --tags status
