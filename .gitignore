@@ -10,6 +10,7 @@
 *.tfvars
 !*.tfvars.example
 .terraform.lock.hcl
+user-data.yaml
 
 # Provider credentials and keys
 credentials.json

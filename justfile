@@ -1,5 +1,31 @@
+# Show all available command categories
+all:
+    @echo "Available command categories:"
+    @echo ""
+    @echo "  just ansible    - Show Ansible-related commands"
+    @echo "  just system     - Show System management commands"
+    @echo ""
+    @echo "Run the specific category to see detailed commands"
 
-# List available Ansible commands
+# System management commands
+system:
+    @echo "Available System commands:"
+    @echo ""
+    @echo "Infrastructure Management:"
+    @echo "  just add-vms ENV                    - Add VMs from tofu output to inventory"
+    @echo ""
+    @echo "Parameters:"
+    @echo "  ENV   : prod | dev | vps"
+    @echo ""
+    @echo "Examples:"
+    @echo "  just add-vms dev                    # Add VMs to dev inventory"
+    @echo "  just add-vms prod                   # Add VMs to prod inventory"
+
+# Add VMs to ansible inventory
+add-vms env="dev":
+    sudo ./scripts/add_vm_inventory.sh {{env}}
+
+# Ansible commands menu
 ansible:
     @echo "Available Ansible commands:"
     @echo ""
