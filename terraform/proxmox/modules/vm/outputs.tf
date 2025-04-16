@@ -14,7 +14,7 @@ output "vm_ips" {
     for vm in proxmox_virtual_environment_vm.vm : flatten([
       for iface_ips in vm.ipv4_addresses : [
         for ip in iface_ips : ip
-        if ip != "127.0.0.1"
+        if ip != "127.0.0.1"  # This hides the local ip and beautifies IP display
       ]
     ])
   ]
