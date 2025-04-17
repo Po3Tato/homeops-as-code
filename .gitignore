@@ -1,9 +1,9 @@
-# Ansible inventory files
+# Ansible inventory
 /ansible/inventory/infra/
 /ansible/vaults/
 !/ansible/inventory/example/
 
-# Terraform/OpenTofu files
+# Terraform/OpenTofu
 **/.terraform/*
 *.tfstate
 *.tfstate.*
@@ -13,10 +13,8 @@
 user-data.yaml
 user-datass.yaml
 startup_script.sh
-/scripts/
-/cloud-init/
-/vultr/dev/
-
+terraform/vultr/prod/scripts/
+terraform/proxmox/dev/cloud-init/
 
 # Provider credentials and keys
 credentials.json
