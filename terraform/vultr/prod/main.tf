@@ -2,7 +2,7 @@ terraform {
   required_providers {
     vultr = {
       source = "vultr/vultr"
-      version = "2.23.1"
+      version = "2.25.0"
     }
   }
 }
@@ -12,20 +12,26 @@ provider "vultr" {
   rate_limit = 100
   retry_limit = 3
 }
+data "vultr_ssh_key" "key_pair" {
+  filter {
+    name = "name"
+    values = ["default-user"]
+  }
+}
 
 resource "vultr_instance" "prod_instance" {
-	plan = "vc2-1c-2gb"
-	region = "ord" # can be a variable
+	plan = "vhf-1c-2gb"
+	region = "nyc" # can be a variable
 	os_id = 2284 # can be a variable
 	label = "prod" # change to dynamic naming
-	tags = ["prod", "proxy"]
-	hostname = "mn-prod-vps01-srv"
-  ssh_key_ids = ""
+	tags = ["PROD", "CICD", "OpenTofu"]
+	hostname = "srv-prod"
+	ssh_key_ids = [data.vultr_ssh_key.key_pair.id]
 	enable_ipv6 = false
 	disable_public_ipv4 = false
 	backups = "enabled"
 	backups_schedule {
-	        type = "daily"
+	        type = "weekly"
 	}
 	ddos_protection = false
 	activation_email = false

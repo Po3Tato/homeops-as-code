@@ -1,7 +1,7 @@
 # Ansible inventory files
-ansible/inventory/infra/
-ansible/vaults/
-!ansible/inventory/example/
+/ansible/inventory/infra/
+/ansible/vaults/
+!/ansible/inventory/example/
 
 # Terraform/OpenTofu files
 **/.terraform/*
@@ -10,6 +10,8 @@ ansible/vaults/
 *.tfvars
 !*.tfvars.example
 .terraform.lock.hcl
+user-data.yaml
+/vultr/dev
 
 # Provider credentials and keys
 credentials.json

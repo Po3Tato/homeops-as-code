@@ -8,7 +8,7 @@ A GitOps appraoch to managing my homelab.
 | Deploy VMs from templates on Proxmox | just | cli | ✅ |
 | Deploy VMs on Proxmox  | just | cli | ✅ |
 | Ansible Restructure  | Ansible | just | ✅ |
-| Configure/baseline VMs and other servers | Ansible | Forgejo/Jenkins/GitHub Actions | ❌ |
+| Configure/baseline VMs and other servers | OpenTofu | just | ✅ |
 | Deploy Docker workloads | Docker Compose | Jenkins | ❌ |
 | Configure/bootstrap Kubernetes nodes | just | taloscli | ❌ |
 | Deploy Kubernetes workloads | Talos | FluxCD | ❌ |

@@ -1,0 +1,4 @@
+api_key = ""
+tailscale_auth_key = "tskey-auth-XXXXXXXXXXXXXXXXXXXX"
+user = "User"
+script_id = "user-startup"
