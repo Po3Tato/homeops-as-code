@@ -1,13 +1,13 @@
 # Vultr VM Deployment with Terraform
 
-This Terraform configuration automates the deployment of VMs on Vultr's cloud platform.
+Terraform configuration to automate the deployment of VMs on Vultr's cloud platform.
 
 ## Folder Structure
 
 ```
 vultr/
 ├── dev/
-│   ├── main.tf        # Development environment configuration
+│   ├── main.tf        # My development environment configuration
 │   └── variables.tf   # Development variables
 ├── prod/
 │   ├── main.tf        # Production environment configuration
@@ -34,20 +34,7 @@ vultr/
 3. Note your firewall group ID
 4. Create environment-specific configurations
 
-## Architecture & Design
-
-### Development Environment (`/dev`)
-- Uses modular approach for multiple instances
-- Supports dynamic instance creation via map variables
-- Includes startup script functionality
-- Flexible hostname formatting
-- Configurable instance specifications per deployment
-
-### Production Environment (`/prod`)
-- Direct instance configuration
-- Simplified, static configuration
-- Focused on single instance deployment
-- Hardened security settings
+## My Architecture & Design
 
 ### VM Module (`/modules/vultr_vm`)
 - Reusable instance configuration
@@ -56,11 +43,9 @@ vultr/
 - Configures backups and security
 - Standardized outputs for instance information
 
-## Key Features
+## Key Features I've Implemented
 - Weekly backups enabled
-- IPv6 disabled by default
-- Firewall group integration
-- Custom tagging support
+- Firewall group assignment
 - Flexible instance sizing
 - Automated hostname generation
 
@@ -71,6 +56,5 @@ vultr/
 - `instance_hostnames_list`: Instance hostnames
 
 ## Notes
-- Uses `vhf-1c-2gb` plan by default (High-Frequency VPS)
-- Backups enabled by default
-- Plan to add WAF playbook
+- My go to VPS is the `vhf-1c-2gb` plan by default (High-Frequency VPS)
+- I plan to add a WAF playbook in future updates
