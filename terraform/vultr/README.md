@@ -3,6 +3,7 @@
 This Terraform configuration automates the deployment of VMs on Vultr's cloud platform.
 
 ## Folder Structure
+```
 vultr/
 ├── dev/
 │   ├── main.tf           # Development environment configuration
@@ -15,6 +16,7 @@ vultr/
         ├── main.tf       # VM module configuration
         ├── variables.tf   # Module variables
         └── outputs.tf    # Module outputs
+```
 
 ## Prerequisites
 1. Vultr account
