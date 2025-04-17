@@ -6,28 +6,23 @@ terraform {
   }
 }
 
-variable "base_name" {
-  description = "Base name for the VMs"
+variable "name" {
+  description = "Name for the VM"
   type        = string
 }
 
-variable "vm_count" {
-  description = "Number of VMs to create"
-  type        = number
-}
-
-variable "vm_id_base" {
-  description = "Starting VM ID"
+variable "vm_id" {
+  description = "VM ID"
   type        = number
 }
 
 variable "cpu_cores" {
-  description = "Number of CPU cores for each VM"
+  description = "Number of CPU cores for the VM"
   type        = number
 }
 
 variable "memory" {
-  description = "Memory in MB for each VM"
+  description = "Memory in MB for the VM"
   type        = number
 }
 
@@ -64,10 +59,10 @@ variable "cloud_image_id" {
 
 variable "cloud_config_id" {
   description = "ID of the cloud config to use"
-  type        = list(string)
+  type        = string
 }
 
-variable "vm_username" {
+variable "username" {
   description = "Username for VM access"
   type        = string
 }
@@ -84,43 +79,43 @@ variable "vm_reboot" {
   default     = false
 }
 
-resource "proxmox_virtual_environment_vm" "vm" {
-  count       = var.vm_count
-  name        = "${var.base_name}-srv${format("%02d", count.index + 1)}"
-  description = "Managed by OpenTofu"
-  tags        = ["opentofu", "musosys"]
-  node_name   = var.node_name
-  vm_id       = var.vm_id_base + count.index
+variable "tags" {
+  description = "Tags to assign to the VM"
+  type        = list(string)
+  default     = ["opentofu", "musosys"]
+}
 
+resource "proxmox_virtual_environment_vm" "vm" {
+  name        = var.name
+  description = "Managed by OpenTofu"
+  tags        = var.tags
+  node_name   = var.node_name
+  vm_id       = var.vm_id
   agent {
-    enabled = var.agent_enabled # Enable after VM boot and agent installation
+    enabled = var.agent_enabled
   }
   reboot = var.vm_reboot
   stop_on_destroy = true
-
+  machine = var.viommu != "" ? "${var.machine_type},viommu=${var.viommu}" : var.machine_type
   startup {
     order      = "3"
     up_delay   = "60"
     down_delay = "60"
   }
-
   cpu {
     cores = var.cpu_cores
-    type  = "x86-64-v2-AES"
+    type  = var.cpu_type
   }
-
   memory {
     dedicated = var.memory
     floating  = var.memory
   }
-
   disk {
     datastore_id = var.datastore_disk
     file_id      = var.cloud_image_id
     interface    = "scsi0"
     size         = var.disk_size
   }
-
   initialization {
     ip_config {
       ipv4 {
@@ -128,20 +123,17 @@ resource "proxmox_virtual_environment_vm" "vm" {
       }
     }
     user_account {
-      username = var.vm_username
+      username = var.username
     }
-    user_data_file_id = var.cloud_config_id[count.index]
+    user_data_file_id = var.cloud_config_id
   }
-
   network_device {
     bridge = var.network_bridge
     model  = "virtio"
     vlan_id = var.vlan_id
   }
-
   operating_system {
     type = "l26"
   }
-
   serial_device {}
 }
