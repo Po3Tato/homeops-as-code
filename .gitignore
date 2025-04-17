@@ -15,6 +15,7 @@ user-datass.yaml
 startup_script.sh
 terraform/vultr/prod/scripts/
 terraform/proxmox/dev/cloud-init/
+terraform/vultr/dev
 
 # Provider credentials and keys
 credentials.json
