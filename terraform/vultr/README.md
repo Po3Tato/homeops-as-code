@@ -68,6 +68,6 @@ Key Features:
 - instance_hostnames_list: Instance hostnames
 
 ## Notes
-- Uses vhf-1c-2gb plan by default. HighFrequency nodes
+- Uses vhf-1c-2gb plan by default. High-Frequency vps
 - Backups enabled by default
 - Plan to add WAF playbook
