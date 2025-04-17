@@ -44,24 +44,11 @@ terraform/proxmox/
 
 The configuration follows a modular approach for better maintainability and reusability. With time, more modules will be added (LXC and SDWAN):
 
-### Dev Environment (`/dev`)
-* Contains environment-specific configurations
-* Manages cloud-init templates and VM image downloads
-* Handles variable definitions for the specific environment
-* Centralizes provider configuration
-
 ### VM Module (`/modules/vm`)
 * Reusable VM configuration template
 * Handles core VM resource creation
 * Manages networking, CPU, memory, and disk configurations
 * Provides standardized outputs for VM information
-
-This separation allows:
-* Easy creation of multiple environments (dev, staging, prod)
-* Consistent VM configurations across environments
-* Centralized management of common VM parameters
-* Simplified maintenance and updates
-* Reusable code for different Proxmox deployments
 
 ## Usage
 
@@ -90,6 +77,6 @@ This separation allows:
 
 * VMs use DHCP networking
 * Default VM specs adjustable in variables
-* VMs tagged with "opentofu" and "musosys"
+* VMs tagged with "opentofu"
 * QEMU guest agent enabled by default
 * Includes hotplug support for CPU and memory
