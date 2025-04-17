@@ -21,8 +21,8 @@ vultr/
 ## Prerequisites
 1. Vultr account
 2. Vultr API key
-3. SSH key uploaded to Vultr (referenced as "musoadmin-dev")
-4. Terraform installed locally
+3. SSH key uploaded to Vultr
+4. OpenTofu or Terraform installed locally
 5. Existing firewall group in Vultr
 
 ## Initial Setup
@@ -32,7 +32,6 @@ vultr/
 4. Create environment-specific configurations
 
 ## Architecture & Design
-The configuration uses different approaches for dev and prod environments:
 
 1. Development Environment (/dev):
    - Uses modular approach for multiple instances
@@ -69,7 +68,6 @@ Key Features:
 - instance_hostnames_list: Instance hostnames
 
 ## Notes
-- Uses vhf-1c-2gb plan by default. HighFrequency
-- Includes CI/CD and OpenTofu tags
+- Uses vhf-1c-2gb plan by default. HighFrequency nodes
 - Backups enabled by default
-- IPv6 disabled by default
+- Plan to add WAF playbook
