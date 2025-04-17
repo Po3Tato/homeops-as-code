@@ -11,6 +11,7 @@
 !*.tfvars.example
 .terraform.lock.hcl
 user-data.yaml
+/vultr/dev
 
 # Provider credentials and keys
 credentials.json
