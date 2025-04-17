@@ -11,9 +11,10 @@
 !*.tfvars.example
 .terraform.lock.hcl
 user-data.yaml
+user-datass.yaml
+startup_script.sh
 /vultr/dev/
-**/cloud-init/
-**/scripts/
+
 
 # Provider credentials and keys
 credentials.json

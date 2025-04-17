@@ -54,7 +54,6 @@ INTERNAL_IP=$(ip -4 addr show | grep -oP '(?<=inet\s)\d+(\.\d+){3}' | grep -v "1
 TAILSCALE_IP=$(tailscale ip -4 2>/dev/null || echo "Not connected")
 cat > /etc/motd << EOF
 Welcome to $HOSTNAME
-Managed by Muso Systems.
 
 System Information:
 Kernel: $KERNEL
