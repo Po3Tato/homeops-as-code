@@ -1,40 +1,24 @@
-variable "base_name" {
-  description = "Base name for the VMs"
-  type        = string
-}
-
-variable "vm_count" {
-  description = "Number of VMs to create"
-  type        = number
-  default     = 1
-}
-
-variable "vm_id_base" {
-  description = "Starting VM ID"
-  type        = number
-}
-
-variable "cpu_cores" {
-  description = "Number of CPU cores for each VM"
-  type        = number
-  default     = 1
-}
-
-variable "memory" {
-  description = "Memory in MB for each VM"
-  type        = number
-  default     = 2048
-}
-
-variable "disk_size" {
-  description = "Disk size in GB"
-  type        = number
-  default     = 20
-}
-
-variable "datastore_disk" {
-  description = "Datastore for VM disks"
-  type        = string
+variable "vms" {
+  description = "Map of VMs with their configurations"
+  type = map(object({
+    name                = string
+    vm_id               = number
+    cpu_cores           = number
+    memory              = number
+    disk_size           = number
+    vlan_id             = number
+    username            = optional(string)
+    vm_reboot           = optional(bool)
+    cloud_init_template = optional(string)
+    cpu_type            = optional(string)
+    hotplug_cpu         = optional(bool)
+    hotplug_memory      = optional(bool)
+    max_cpu             = optional(number)
+    max_memory          = optional(number)
+    machine_type        = optional(string)
+    viommu              = optional(string)
+    tags                = optional(list(string), [])
+  }))
 }
 
 variable "node_name" {
@@ -42,22 +26,15 @@ variable "node_name" {
   type        = string
 }
 
+variable "datastore_disk" {
+  description = "Datastore for VM disks"
+  type        = string
+}
+
 variable "network_bridge" {
   description = "Network bridge to use"
   type        = string
   default     = "vmbr0"
-}
-
-variable "vlan_id" {
-  description = "VLAN ID for network interface"
-  type        = number
-  default     = null # non-VLAN networks
-}
-
-variable "vm_username" {
-  description = "Default username for the VM"
-  type        = string
-  default     = "dev-ubuntu"
 }
 
 variable "virtual_environment_endpoint" {
@@ -69,12 +46,6 @@ variable "virtual_environment_api_token" {
   description = "Proxmox API token"
   type        = string
   sensitive   = true
-}
-
-variable "use_meta_data" {
-  description = "Whether to use meta data"
-  type        = bool
-  default     = true
 }
 
 variable "ubuntu_cloud_image_url" {
@@ -93,32 +64,63 @@ variable "agent_enabled" {
   type        = bool
   default     = true
 }
-variable "hotplug_cpu" {
-  description = "Enable CPU hotplug"
-  type        = bool
-  default     = true
-}
-
-variable "hotplug_memory" {
-  description = "Enable memory hotplug"
-  type        = bool
-  default     = true
-}
-
-variable "max_cpu" {
-  description = "Maximum CPU cores for hotplug"
-  type        = number
-  default     = 1
-}
-
-variable "max_memory" {
-  description = "Maximum memory in MB for hotplug"
-  type        = number
-  default     = 2048
-}
 
 variable "tailscale_authkey" {
   description = "Tailscale authentication key"
   type        = string
   sensitive   = true
+}
+
+variable "default_username" {
+  description = "Default username for VMs if not specified"
+  type        = string
+  default     = "ubuntu"
+}
+
+variable "default_cloud_init" {
+  description = "Default cloud-init template to use if not specified"
+  type        = string
+  default     = "user-data.yaml"
+}
+
+variable "default_cpu_type" {
+  description = "Default CPU type to use if not specified"
+  type        = string
+  default     = "x86-64-v2-AES"
+}
+
+variable "default_hotplug_cpu" {
+  description = "Default setting for CPU hotplug"
+  type        = bool
+  default     = false
+}
+
+variable "default_hotplug_memory" {
+  description = "Default setting for memory hotplug"
+  type        = bool
+  default     = false
+}
+
+variable "default_max_cpu" {
+  description = "Default maximum CPU cores for hotplug"
+  type        = number
+  default     = 4
+}
+
+variable "default_max_memory" {
+  description = "Default maximum memory in MB for hotplug"
+  type        = number
+  default     = 8192
+}
+
+variable "default_machine_type" {
+  description = "Default machine type for VMs"
+  type        = string
+  default     = "i440fx"
+}
+
+variable "default_viommu" {
+  description = "Default vIOMMU setting (empty string for disabled)"
+  type        = string
+  default     = ""
 }

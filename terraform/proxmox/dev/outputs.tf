@@ -1,14 +1,14 @@
 output "vm_ids" {
   description = "IDs of the created VMs"
-  value       = module.vms.vm_ids
+  value       = { for k, v in module.vms : k => v.vm_id }
 }
 
 output "vm_names" {
   description = "Names of the created VMs"
-  value       = module.vms.vm_names
+  value       = { for k, v in module.vms : k => v.vm_name }
 }
 
 output "vm_ips" {
   description = "IP addresses of the created VMs"
-  value       = module.vms.vm_ips
+  value       = { for k, v in module.vms : k => v.vm_ips }
 }

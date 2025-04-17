@@ -1,0 +1,101 @@
+#cloud-config
+hostname: ${hostname}
+fqdn: ${hostname}.local
+manage_etc_hosts: true
+users:
+ - name: ${username}
+   sudo: ALL=(ALL) NOPASSWD:ALL
+   groups: sudo
+   shell: /bin/bash
+   lock_passwd: true
+   ssh_authorized_keys:
+     - ${ssh_key}
+package_update: true
+package_upgrade: true
+packages:
+ - qemu-guest-agent
+ - vim
+ - curl
+ - acpiphp
+ - pci-hotplug
+ - qemu-kvm
+ - libvirt-daemon-system
+ - libvirt-clients
+ - bridge-utils
+ - virtinst
+timezone: UTC
+write_files:
+ - path: /etc/update-motd.d/10-custom-motd
+   permissions: '0755'
+   content: |
+     #!/bin/bash
+     # Dynamic MOTD
+     HOSTNAME=$(hostname)
+     KERNEL=$(uname -r)
+     UPTIME=$(uptime -p)
+     LOAD=$(cat /proc/loadavg | awk '{print $1 ", " $2 ", " $3}')
+     MEMORY=$(free -h | grep "Mem:" | awk '{print $3 "/" $2}')
+     DISK=$(df -h / | awk 'NR==2 {print $3 "/" $2 " (" $5 ")"}')
+     USERS=$(who | wc -l)
+     # Get IP addresses
+     INTERNAL_IP=$(ip -4 addr show | grep -oP '(?<=inet\s)\d+(\.\d+){3}' | grep -v "127.0.0.1" | head -n 1)
+     TAILSCALE_IP=$(tailscale ip -4 2>/dev/null || echo "Not connected")
+     echo "Welcome to $HOSTNAME"
+     echo "Managed by Muso Systems."
+     echo "─────────────────────────────────────────────────────"
+     echo "System Information:"
+     echo " Kernel: $KERNEL"
+     echo " Uptime: $UPTIME"
+     echo " Load: $LOAD"
+     echo " Memory: $MEMORY"
+     echo " Disk Usage: $DISK"
+     echo " Internal IP: $INTERNAL_IP"
+     echo " Tailscale IP: $TAILSCALE_IP"
+     echo " Users: $USERS active"
+     echo "─────────────────────────────────────────────────────"
+     echo "ATTENTION: This system is for authorized users only"
+     echo "Last login: $(date)"
+     echo ""
+ - path: /lib/udev/rules.d/80-hotplug-cpu.rules
+   content: |
+     SUBSYSTEM=="cpu", ACTION=="add", TEST=="online", ATTR{online}=="0", ATTR{online}="1"
+runcmd:
+ # Remove default MOTD files
+ - rm -f /etc/update-motd.d/00-header
+ - rm -f /etc/update-motd.d/10-help-text
+ - rm -f /etc/update-motd.d/50-landscape-sysinfo
+ - rm -f /etc/update-motd.d/50-motd-news
+ - rm -f /etc/update-motd.d/60-unminimize
+ - rm -f /etc/update-motd.d/85-fwupd
+ - rm -f /etc/update-motd.d/88-esm-announce
+ - rm -f /etc/update-motd.d/91-contract-ua-esm-status
+ - rm -f /etc/update-motd.d/91-release-upgrade
+ - rm -f /etc/update-motd.d/95-hwe-eol
+ - rm -f /etc/motd
+ # Create empty motd file
+ - touch /etc/motd
+ # Install Tailscale
+ - ['sh', '-c', 'curl -fsSL https://tailscale.com/install.sh | sh']
+ - ['sh', '-c', "echo 'net.ipv4.ip_forward = 1' | sudo tee -a /etc/sysctl.d/99-tailscale.conf && echo 'net.ipv6.conf.all.forwarding = 1' | sudo tee -a /etc/sysctl.d/99-tailscale.conf && sudo sysctl -p /etc/sysctl.d/99-tailscale.conf"]
+ - ['tailscale', 'up', '--auth-key=${tailscale_authkey}', '--hostname=${hostname}']
+ - ['tailscale', 'set', '--ssh']
+ # VM specific configurations
+ - systemctl enable qemu-guest-agent
+ - systemctl start qemu-guest-agent
+ - modprobe acpiphp
+ - modprobe pci_hotplug
+ - echo "acpiphp" >> /etc/modules
+ - echo "pci_hotplug" >> /etc/modules
+ # Add Intel IOMMU kernel parameter
+ - sed -i 's/GRUB_CMDLINE_LINUX_DEFAULT="/GRUB_CMDLINE_LINUX_DEFAULT="intel_iommu=on /' /etc/default/grub
+ - update-grub
+ - udevadm control --reload-rules
+ - udevadm trigger
+ - systemctl daemon-reload
+ - systemctl disable rpcbind
+ - systemctl stop rpcbind
+ - echo "memhp_default_state=online" >> /etc/default/grub.d/99-cloudimg-settings.cfg
+ - update-grub
+ # Ensure MOTD is properly set up
+ - chmod +x /etc/update-motd.d/10-custom-motd
+ - systemctl restart systemd-update-motd
