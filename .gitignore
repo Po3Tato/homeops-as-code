@@ -13,6 +13,8 @@
 user-data.yaml
 user-datass.yaml
 startup_script.sh
+/scripts/
+/cloud-init/
 /vultr/dev/
 
 
