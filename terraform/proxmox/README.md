@@ -21,8 +21,7 @@ terraform/proxmox/
 ## Prerequisites
 
 1. Proxmox VE server
-2. Terraform installed on your local machine
-3. SSH key pair (`~/.ssh/id_rsa` and `~/.ssh/id_rsa.pub`)
+2. OpenTofu/Terraform installed on your local machine
 4. Proxmox API token
 5. Tailscale account and authkey (if using Tailscale)
 
