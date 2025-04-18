@@ -18,6 +18,13 @@ variable "vms" {
     machine_type        = optional(string)
     viommu              = optional(string)
     tags                = optional(list(string), [])
+    hostpci = optional(list(object({
+      device = string
+      mapping     = string
+      pcie   = optional(bool)
+      rombar = optional(bool)
+      xvga   = optional(bool)
+    })), [])
   }))
 }
 
@@ -51,6 +58,7 @@ variable "virtual_environment_api_token" {
 variable "ubuntu_cloud_image_url" {
   description = "URL for Ubuntu cloud image"
   type        = string
+  default     = "https://cloud-images.ubuntu.com/minimal/daily/noble/current/noble-minimal-cloudimg-amd64.img"
 }
 
 variable "vm_reboot" {
@@ -68,7 +76,6 @@ variable "agent_enabled" {
 variable "tailscale_authkey" {
   description = "Tailscale authentication key"
   type        = string
-  sensitive   = true
 }
 
 variable "default_username" {
