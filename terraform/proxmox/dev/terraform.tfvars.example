@@ -1,0 +1,83 @@
+node_name                     = "pve-node01"
+datastore_disk                = "local-vm"
+network_bridge                = "vmbr0"
+virtual_environment_endpoint  = "https://192.168.1.100:8006/api2/json"
+virtual_environment_api_token = "XXXXXXXXXXXXXXXXXXXXXX"
+ubuntu_cloud_image_url        = "https://cloud-images.ubuntu.com/minimal/daily/noble/current/noble-minimal-cloudimg-amd64.img"
+agent_enabled                 = true
+vm_reboot                     = false
+tailscale_authkey             = "tskey-auth-XXXXXXX"
+default_username              = "user"
+default_cloud_init            = "user-data.yaml"
+default_cpu_type              = "x86-64-v2-AES"
+default_hotplug_cpu           = false
+default_hotplug_memory        = false
+default_max_cpu               = 4
+default_max_memory            = 8192
+default_machine_type          = "i440fx"
+default_viommu                = ""
+
+vms = {
+  dev-srv01 = {
+    name                = "dev-server-01"
+    cpu_type            = "x86-64-v2-AES"
+    vm_id               = 5501
+    cpu_cores           = 1
+    memory              = 2048
+    disk_size           = 20
+    vlan_id             = 102
+    cloud_init_template = "user-data.yaml"
+    tags                = ["web", "production"]
+  },
+  dev-srv02 = {
+    name                = "dev-server-02"
+    cpu_type            = "x86-64-v2-AES"
+    vm_id               = 5502
+    cpu_cores           = 1
+    memory              = 2048
+    disk_size           = 20
+    vlan_id             = 102
+    cloud_init_template = "user-data.yaml"
+    tags                = ["web", "production"]
+  },
+  dev = {
+    name                = "dev-server-03"
+    cpu_type            = "x86-64-v2-AES"
+    vm_id               = 5503
+    cpu_cores           = 1
+    memory              = 2048
+    disk_size           = 20
+    vlan_id             = 102
+    username            = "user2"
+    cloud_init_template = "user-data.yaml"
+    viommu              = ""
+    tags                = ["development"]
+  },
+  scaling = {
+    name                = "scaling-server-04"
+    cpu_type            = "host"
+    vm_id               = 5504
+    cpu_cores           = 6
+    memory              = 4096
+    disk_size           = 40
+    vlan_id             = 102
+    viommu              = ""
+    cloud_init_template = "user-data2.yaml"
+    hotplug_cpu         = true
+    hotplug_memory      = true
+    max_cpu             = 8     # Maximum CPUs that can be assigned
+    max_memory          = 16384 # Maximum memory that can be assigned (16GB)
+    tags                = ["scalable"]
+# WIP seems to cause vm not to bootup
+#    machine_type        = "q35"
+#    hostpci = [
+#      {
+#        device = "hostpci0"
+#        mapping     = "gpu-2200"
+#        pcie   = true
+#        rombar  = true
+#        xvga    = false
+#      }
+#    ]
+  },
+}

@@ -1,0 +1,208 @@
+---
+- hosts: "{{ ansible_limit | default('all') }}"
+  become: true
+  vars:
+    main_interface: "{{ ansible_default_ipv4.interface | default('eth0') }}"
+    tailscale_interface: tailscale0
+    enable_drop_zone: true
+    restricted_zone: public
+    trusted_zone: trusted
+    essential_services:
+      - ssh
+    optional_services:
+      - http
+      - https
+    icmp_allow_types:
+      - echo-reply
+      - echo-request
+      - destination-unreachable
+      - time-exceeded
+
+  tasks:
+    - name: Install required packages
+      package:
+        name:
+          - firewalld
+          - python3-firewall  # For ansible.posix.firewalld module
+        state: present
+
+    - name: Ensure firewalld service is enabled and started
+      systemd:
+        name: firewalld
+        enabled: true
+        state: started
+
+    - name: Create Tailscale service file
+      copy:
+        dest: /etc/firewalld/services/tailscale.xml
+        content: |
+          <?xml version="1.0" encoding="utf-8"?>
+          <service>
+            <short>tailscale</short>
+            <description>Tailscale mesh VPN</description>
+            <port protocol="udp" port="41641"/>
+          </service>
+        mode: '0644'
+        backup: yes
+      register: tailscale_service
+
+    - name: Reload firewalld to load new service
+      systemd:
+        name: firewalld
+        state: reloaded
+      when: tailscale_service.changed
+
+    - name: Get current zones for interfaces
+      command: "firewall-cmd --get-zone-of-interface={{ item }}"
+      register: interface_zones
+      failed_when: false
+      changed_when: false
+      loop:
+        - "{{ main_interface }}"
+        - "{{ tailscale_interface }}"
+
+    - name: Assign main interface to public zone
+      ansible.posix.firewalld:
+        zone: "{{ restricted_zone }}"
+        interface: "{{ main_interface }}"
+        state: enabled
+        permanent: true
+        immediate: true
+      when: interface_zones.results[0].stdout != restricted_zone
+
+    - name: Assign Tailscale interface to trusted zone
+      ansible.posix.firewalld:
+        zone: "{{ trusted_zone }}"
+        interface: "{{ tailscale_interface }}"
+        state: enabled
+        permanent: true
+        immediate: true
+      when: interface_zones.results[1].stdout != trusted_zone
+
+    - name: Enable Tailscale service in public zone
+      ansible.posix.firewalld:
+        service: tailscale
+        zone: "{{ restricted_zone }}"
+        permanent: true
+        immediate: true
+        state: enabled
+
+    - name: Enable essential services in public zone
+      ansible.posix.firewalld:
+        service: "{{ item }}"
+        zone: "{{ restricted_zone }}"
+        permanent: true
+        immediate: true
+        state: enabled
+      loop: "{{ essential_services }}"
+
+    # Docker-specific configuration block
+    - name: Configure Docker firewall integration
+      block:
+        - name: Gather package facts
+          package_facts:
+            manager: auto
+
+        - name: Check if Docker bridge interface exists
+          command: ip link show docker0
+          register: docker_interface_check
+          failed_when: false
+          changed_when: false
+
+        - name: Get Docker bridge interface from Docker info
+          command: docker info --format '{{ "{{" }}.DockerRootDir{{ "}}" }}'
+          register: docker_info
+          changed_when: false
+          failed_when: false
+          when: docker_interface_check.rc == 0
+
+        - name: Configure docker0 interface in trusted zone
+          ansible.posix.firewalld:
+            zone: "{{ trusted_zone }}"
+            interface: docker0
+            state: enabled
+            permanent: true
+            immediate: true
+          when: 
+            - docker_interface_check.rc == 0
+            - ("'docker' in ansible_facts.packages or 'docker-ce' in ansible_facts.packages")
+      tags:
+        - docker_firewall
+
+    - name: Enable optional services in public zone (if needed)
+      ansible.posix.firewalld:
+        service: "{{ item }}"
+        zone: "{{ restricted_zone }}"
+        permanent: true
+        immediate: true
+        state: enabled
+      loop: "{{ optional_services }}"
+      tags: 
+        - optional_services
+        - never
+
+    - name: Allow specific ICMP types in public zone
+      ansible.posix.firewalld:
+        icmp_block: "{{ item }}"
+        zone: "{{ restricted_zone }}"
+        permanent: true
+        immediate: true
+        state: disabled
+      loop: "{{ icmp_allow_types }}"
+
+    - name: Enable IP forwarding
+      ansible.posix.sysctl:
+        name: "{{ item }}"
+        value: "1"
+        state: present
+        sysctl_file: /etc/sysctl.d/99-tailscale.conf
+        reload: true
+      loop:
+        - net.ipv4.ip_forward
+        - net.ipv6.conf.all.forwarding
+
+    - name: Enable masquerading (IPv4 and IPv6)
+      ansible.posix.firewalld:
+        masquerade: yes
+        zone: "{{ trusted_zone }}"
+        permanent: true
+        immediate: true
+        state: enabled
+
+    - name: Add IPv6 masquerade rule
+      ansible.posix.firewalld:
+        rich_rule: 'rule family="ipv6" masquerade'
+        zone: "{{ trusted_zone }}"
+        permanent: true
+        immediate: true
+        state: enabled
+
+    - name: Get current default zone
+      command: firewall-cmd --get-default-zone
+      register: current_default_zone
+      changed_when: false
+
+    - name: Set default zone to drop
+      command: firewall-cmd --set-default-zone=drop
+      when: 
+        - enable_drop_zone | bool
+        - current_default_zone.stdout != 'drop'
+      register: set_default_zone
+      changed_when: set_default_zone.rc == 0
+      tags:
+        - drop_zone
+
+    - name: Validate firewall configuration
+      command: firewall-cmd --state
+      register: firewall_state
+      changed_when: false
+      failed_when: firewall_state.stdout != 'running'
+
+    - name: Display firewall configuration summary
+      debug:
+        msg:
+          - "Main interface ({{ main_interface }}) in {{ restricted_zone }} zone"
+          - "Tailscale interface ({{ tailscale_interface }}) in {{ trusted_zone }} zone"
+          - "Default zone: {{ current_default_zone.stdout }}"
+          - "Essential services enabled: {{ essential_services | join(', ') }}"
+          - "Docker interface configured: {{ 'Yes' if docker_interface_check.rc == 0 else 'No' }}"

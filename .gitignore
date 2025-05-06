@@ -1,0 +1,30 @@
+# Ansible inventory
+/ansible/inventory/infra/
+/ansible/vaults/
+!/ansible/inventory/example/
+
+# Terraform/OpenTofu
+**/.terraform/*
+*.tfstate
+*.tfstate.*
+*.tfvars
+!*.tfvars.example
+.terraform.lock.hcl
+user-data.yaml
+user-datass.yaml
+startup_script.sh
+terraform/vultr/prod/scripts/
+terraform/proxmox/dev/cloud-init/
+terraform/vultr/dev
+
+# Provider credentials and keys
+credentials.json
+*.pem
+*.key
+**/account.json
+.env
+
+# IDE and temp files
+.DS_Store
+.vscode/
+*.swp

@@ -1,0 +1,33 @@
+vultr_api_key = "XXXXXXXXXXXXXXXXXXXXXXX"
+username = "USER"
+basename = "web-app"
+tailscale_auth_key = "tskey-auth-XXXXXXXXXXXXXXXXXXXXXXXXX"
+ssh_key_name = "deault-name"
+region = "sea"
+os_id = 1743
+firewall_group_id = "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
+backups_enabled = "disabled"
+backup_schedule = {
+  type = "weekly"
+}
+script_name = "startup_script"
+instances = {
+  "ext01" = {
+    plan = "vhp-1c-1gb"
+    region = "ord"
+    number = 1
+    tags = ["PROD1", "OpenTofu"]
+  },
+  "ext02" = {
+    plan = "vhp-1c-1gb"
+    region = "ord"
+    number = 1
+    tags = ["PROD2", "OpenTofu"]
+  },
+  "ext03" = {
+    plan = "vhp-1c-1gb"
+    region = "ord"
+    number = 1
+    tags = ["PROD3", "OpenTofu"]
+  }
+}

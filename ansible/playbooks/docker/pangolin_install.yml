@@ -1,0 +1,307 @@
+---
+- name: Install Fossorial Pangolin with Expect
+  hosts: "{{ ansible_limit | default('all') }}"
+  become: yes
+  vars_files:
+    - ../vars/pangolin_vars.yml
+  vars:
+    # User variable either User or replace
+    pangolin_user: "{{ lookup('env', 'USER') }}"
+  
+  tasks:
+    - name: Display user information for debugging
+      debug:
+        msg: 
+          - "ansible_user_id: {{ ansible_user_id }}"
+          - "pangolin_user: {{ pangolin_user }}"
+
+    - name: Install expect package
+      package:
+        name: expect
+        state: present
+      when: ansible_os_family in ['Debian']
+
+    - name: Check for previous installation
+      stat:
+        path: "/home/{{ pangolin_user }}/docker/Fossorial/installer"
+      register: previous_install
+
+    - name: Ensure docker directory structure exists
+      file:
+        path: "/home/{{ pangolin_user }}/docker/Fossorial"
+        state: directory
+        mode: '0755'
+        owner: "{{ pangolin_user }}"
+        group: "{{ pangolin_user }}"
+
+    - name: Download Fossorial installer
+      get_url:
+        url: "https://github.com/fosrl/pangolin/releases/download/{{ pangolin_version }}/installer_linux_{{ cpu_architecture }}"
+        dest: "/home/{{ pangolin_user }}/docker/Fossorial/installer"
+        mode: '0755'
+      become_user: "{{ pangolin_user }}"
+
+    - name: Create expect script for fresh installation
+      copy:
+        dest: "/home/{{ pangolin_user }}/docker/Fossorial/install_expect.sh"
+        content: |
+          #!/usr/bin/expect -f
+          
+          set timeout 60
+          
+          # Run installer
+          spawn ./installer
+          
+          # Check for root requirement
+          expect {
+            "*This script must be run as root*" { 
+              puts "Requires root privileges"
+              exit 1 
+            }
+            "*Looks like you already installed*" { 
+              puts "Detected previous installation"
+              
+              # For existing installations, wait for CrowdSec prompt and answer immediately
+              set timeout 30
+              expect {
+                "*Would you like to install CrowdSec*" { 
+                  puts "Answering CrowdSec prompt with: {{crowdsec_install}}"
+                  send "{{crowdsec_install}}\r" 
+                }
+                timeout { 
+                  puts "CrowdSec prompt not found within timeout"
+                  exit 1 
+                }
+              }
+              
+              {% if crowdsec_install == "yes" %}
+              expect {
+                "*Are you willing to manage CrowdSec*" { 
+                  puts "Answering CrowdSec management prompt with: {{agree}}"
+                  send "{{agree}}\r" 
+                }
+                "*Installation complete*" { 
+                  puts "Installation completed successfully"
+                  exit 0 
+                }
+                timeout { 
+                  puts "CrowdSec management prompt timeout"
+                  exit 1 
+                }
+              }
+              {% endif %}
+              
+              # Wait for completion
+              expect {
+                "*Installation complete*" { puts "Installation completed successfully"; exit 0 }
+                eof { puts "End of installation"; exit 0 }
+                timeout { puts "Installation completion timeout"; exit 1 }
+              }
+            }
+            "*Enter your base domain*" { 
+              send "{{ base_domain }}\r"
+            }
+            timeout { puts "Initial prompt timeout"; exit 1 }
+          }
+          
+          # Continue with fresh installation
+          expect {
+            "*Enter the domain for the Pangolin dashboard*" { send "{{ dashboard_domain }}\r" }
+            timeout { puts "Dashboard domain prompt timeout"; exit 1 }
+          }
+          
+          expect {
+            "*Enter email for Let's Encrypt certificates*" { send "{{ letsencrypt_email }}\r" }
+            timeout { puts "Let's Encrypt email prompt timeout"; exit 1 }
+          }
+          
+          expect {
+            "*Do you want to use Gerbil*" { send "{{ tunneling_choice }}\r" }
+            timeout { puts "Tunneling choice prompt timeout"; exit 1 }
+          }
+          
+          # Admin Configuration
+          expect {
+            "*Enter admin user email*" { send "{{ admin_email }}\r" }
+            timeout { puts "Admin email prompt timeout"; exit 1 }
+          }
+          
+          expect {
+            "*Create admin user password*" { send "{{ admin_password }}\r" }
+            timeout { puts "Admin password prompt timeout"; exit 1 }
+          }
+          
+          expect {
+            "*Confirm admin user password*" { send "{{ admin_password }}\r" }
+            timeout { puts "Confirm password prompt timeout"; exit 1 }
+          }
+          
+          # Security Settings
+          expect {
+            "*Disable signup without invite*" { send "{{ signup_without_invite }}\r" }
+            timeout { puts "Signup without invite prompt timeout"; exit 1 }
+          }
+          
+          expect {
+            "*Disable users from creating organizations*" { 
+              if { "{{ organization_creation }}" == "y" } {
+                send "no\r"
+              } else {
+                send "yes\r"
+              }
+            }
+            timeout { puts "Organization creation prompt timeout"; exit 1 }
+          }
+          
+          # Email Configuration
+          expect {
+            "*Enable email functionality*" { send "{{ enable_email }}\r" }
+            timeout { puts "Email functionality prompt timeout"; exit 1 }
+          }
+          
+          # Handle SMTP configuration or skip to installation
+          expect {
+            "*Enter SMTP host*" { 
+              send "{{ smtp_host }}\r"
+              
+              expect {
+                "*Enter SMTP port*" { send "{{ smtp_port }}\r" }
+                timeout { puts "SMTP port prompt timeout"; exit 1 }
+              }
+              
+              expect {
+                "*Enter SMTP username*" { send "{{ smtp_username }}\r" }
+                timeout { puts "SMTP username prompt timeout"; exit 1 }
+              }
+              
+              expect {
+                "*Enter SMTP password*" { send "{{ smtp_password }}\r" }
+                timeout { puts "SMTP password prompt timeout"; exit 1 }
+              }
+              
+              expect {
+                "*Enter no-reply email address*" { send "{{ no_reply_email }}\r" }
+                timeout { puts "No-reply email prompt timeout"; exit 1 }
+              }
+            }
+            "*Starting installation*" { puts "Skipping SMTP configuration" }
+            "*install and start the containers*" { send "{{start_containers}}\r" }
+            timeout { puts "SMTP host or installation prompt timeout"; exit 1 }
+          }
+          
+          # Catch container installation prompt if we haven't seen it yet
+          expect {
+            "*Would you like to install and start the containers*" { send "{{start_containers}}\r" }
+            "*install and start the containers*" { send "{{start_containers}}\r" }
+            "*Would you like to install CrowdSec*" { send "{{crowdsec_install}}\r" }
+            timeout { puts "Container installation or CrowdSec prompt timeout"; exit 1 }
+          }
+          
+          # CrowdSec Install - if we haven't reached it already
+          expect {
+            "*Would you like to install CrowdSec*" { send "{{crowdsec_install}}\r" }
+            "*Installation complete*" { puts "Installation completed successfully"; exit 0 }
+            eof { puts "End of installation"; exit 0 }
+            timeout { puts "CrowdSec or completion prompt timeout"; exit 0 }
+          }
+          
+          {% if crowdsec_install == "yes" %}
+          expect {
+            "*Are you willing to manage CrowdSec*" { send "{{agree}}\r" }
+            "*Installation complete*" { puts "Installation completed successfully"; exit 0 }
+            eof { puts "End of installation"; exit 0 }
+            timeout { puts "CrowdSec management prompt timeout"; exit 0 }
+          }
+          {% endif %}
+          
+          # Final wait for completion
+          expect {
+            "*Installation complete*" { puts "Installation completed successfully"; exit 0 }
+            eof { puts "End of installation"; exit 0 }
+            timeout { puts "Timed out waiting for completion"; exit 0 }
+          }
+        mode: '0755'
+        owner: "{{ pangolin_user }}"
+        group: "{{ pangolin_user }}"
+      become_user: "{{ pangolin_user }}"
+
+    - name: Run installer with manual removal (if requested) and forced clean exit
+      shell: |
+        cd /home/{{ pangolin_user }}/docker/Fossorial
+        {% if clean_previous_install | default(false) | bool %}
+        echo "Cleaning up previous installation as requested..."
+        # Stop and remove any running containers
+        docker ps -a | grep fosrl | awk '{print $1}' | xargs -r docker stop
+        docker ps -a | grep fosrl | awk '{print $1}' | xargs -r docker rm
+        # Remove volumes
+        docker volume ls | grep fosrl | awk '{print $2}' | xargs -r docker volume rm
+        # Remove installation files
+        rm -rf /home/{{ pangolin_user }}/docker/Fossorial/*
+        # Re-download the installer
+        curl -L "https://github.com/fosrl/pangolin/releases/download/{{ pangolin_version }}/installer_linux_{{ cpu_architecture }}" -o /home/{{ pangolin_user }}/docker/Fossorial/installer
+        chmod 755 /home/{{ pangolin_user }}/docker/Fossorial/installer
+        {% endif %}
+        
+        # Run the expect script with a reasonable timeout
+        timeout 30 expect /home/{{ pangolin_user }}/docker/Fossorial/install_expect.sh || true
+        
+        # If the installation appears to be hung on CrowdSec prompt, try to answer it directly
+        if ! docker ps | grep -q fosrl && ! [ -f "/home/{{ pangolin_user }}/docker/Fossorial/docker-compose.yml" ]; then
+          echo "Installation may be hung at CrowdSec prompt, attempting to complete manually..."
+          # Create a simple expect script that just answers the CrowdSec prompt
+          cat > /home/{{ pangolin_user }}/docker/Fossorial/crowdsec_fix.exp << EOF
+        #!/usr/bin/expect -f
+        set timeout 10
+        spawn ./installer
+        expect {
+          "*Would you like to install CrowdSec*" { send "{{ crowdsec_install }}\r" }
+          timeout { exit 1 }
+        }
+        expect {
+          "*Installation complete*" { exit 0 }
+          "*Are you willing to manage CrowdSec*" { send "{{ agree }}\r" }
+          timeout { exit 1 }
+        }
+        expect {
+          "*Installation complete*" { exit 0 }
+          timeout { exit 1 }
+        }
+        EOF
+          chmod 755 /home/{{ pangolin_user }}/docker/Fossorial/crowdsec_fix.exp
+          # Run the simplified expect script
+          cd /home/{{ pangolin_user }}/docker/Fossorial && expect crowdsec_fix.exp || true
+          # Clean up the temporary script
+          rm -f /home/{{ pangolin_user }}/docker/Fossorial/crowdsec_fix.exp
+        fi
+        
+        # Check if installation seems to be working regardless of expect script status
+        if docker ps | grep -q fosrl; then
+          echo "Docker containers are running - installation appears successful"
+        elif [ -f "/home/{{ pangolin_user }}/docker/Fossorial/docker-compose.yml" ]; then
+          echo "docker-compose.yml exists - installation appears successful"
+        else
+          echo "No evidence of successful installation found"
+          exit 1
+        fi
+        
+        # Clean up expect script after successful installation
+        rm -f /home/{{ pangolin_user }}/docker/Fossorial/install_expect.sh
+        
+        exit 0
+      args:
+        executable: /bin/bash
+      register: install_result
+      become: yes
+      become_user: root
+      changed_when: true
+      failed_when: install_result.rc != 0
+
+    - name: Display installation output
+      debug:
+        var: install_result.stdout_lines
+
+    - name: Display installation complete message
+      debug:
+        msg: "Fossorial Pangolin installation completed. Access at https://{{ dashboard_domain }}"
+      when: install_result.rc == 0
+  

@@ -1,0 +1,50 @@
+---
+- hosts: all
+  become: true
+  gather_facts: yes
+  tasks:
+    - name: Update Debian/Ubuntu Servers (apt)
+      tags: package_update, deb_srv
+      ansible.builtin.apt:
+        update_cache: yes
+        upgrade: dist
+        cache_valid_time: 3600
+      when: ansible_distribution in ['Debian', 'Ubuntu']
+
+    - name: Update RHEL-based Servers (dnf)
+      tags: package_update, rpm_srv
+      ansible.builtin.dnf:
+        name: "*"
+        state: latest
+        update_cache: yes
+      when: ansible_distribution in ['Rocky', 'CentOS', 'RedHat']
+
+    - name: Check if reboot required (Debian/Ubuntu)
+      tags: reboot_check
+      command: test -f /var/run/reboot-required
+      register: debian_reboot_required
+      failed_when: false
+      changed_when: false
+      when: ansible_distribution in ['Debian', 'Ubuntu']
+
+    - name: Check if reboot required (RHEL-based)
+      tags: reboot_check
+      command: needs-restarting -r
+      register: rhel_reboot_required
+      failed_when: false
+      changed_when: false
+      when: ansible_distribution in ['Rocky', 'CentOS', 'RedHat']
+
+    - name: Show reboot status for Debian/Ubuntu systems
+      debug:
+        msg: "{{ inventory_hostname }} requires a reboot"
+      when: >
+        ansible_distribution in ['Debian', 'Ubuntu'] and
+        debian_reboot_required.rc == 0
+
+    - name: Show reboot status for RHEL-based systems
+      debug:
+        msg: "{{ inventory_hostname }} requires a reboot"
+      when: >
+        ansible_distribution in ['Rocky', 'CentOS', 'RedHat'] and
+        rhel_reboot_required.rc == 1

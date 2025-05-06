@@ -1,0 +1,21 @@
+---
+- hosts: all
+  become: true
+  vars_files:
+    - vars/base_pkgs.yml
+  tasks:
+    - name: Installing Base Packages -deb-
+      tags: deb
+      ansible.builtin.package:
+        name: "{{ base_pkgs_deb }}"
+        state: latest
+        update_cache: yes
+      when: ansible_distribution in ['Debian', 'Ubuntu']
+
+    - name: Installing Base Packages -rpm-
+      tags: rpm
+      ansible.builtin.dnf:
+        name: "{{ base_pkgs_rpm }}"
+        state: latest
+        update_cache: yes
+      when: ansible_distribution in ['Rocky']

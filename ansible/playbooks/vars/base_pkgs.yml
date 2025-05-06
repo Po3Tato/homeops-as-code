@@ -1,0 +1,8 @@
+---
+base_pkgs_deb:
+  - vim
+  - curl
+
+base_pkgs_rpm:
+  - vim
+  - curl

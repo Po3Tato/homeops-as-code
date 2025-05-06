@@ -1,0 +1,57 @@
+#cloud-config
+package_update: true
+package_upgrade: true
+
+packages:
+  - curl
+  - git
+
+users:
+  - name: ${user}
+    groups: sudo,adm  # Add to adm group for log access
+    shell: /bin/bash
+    sudo: ['ALL=(ALL) NOPASSWD:ALL']
+    ssh_authorized_keys:
+      - ${ssh_key}
+    lock_passwd: true
+    passwd: '*'
+
+timezone: UTC
+
+write_files:
+  - path: /root/scripts/ts-startup.sh
+    permissions: '0500'  # More restrictive permissions
+    owner: root:root    # Explicitly set owner
+    content: |
+      #!/usr/bin/env bash
+      set -e  # Exit on any error
+      echo "Starting Tailscale installation at $(date)"
+      if ! command -v tailscale &> /dev/null; then
+          curl -fsSL https://tailscale.com/install.sh | sh
+      fi
+      if ! tailscale status &> /dev/null; then
+          tailscale up --ssh --authkey ${ts_auth}
+      fi
+      echo "Tailscale installation completed at $(date)"
+
+  - path: /etc/ssh/sshd_config.d/hardening.conf
+    permissions: '0600'
+    owner: root:root
+    content: |
+      PermitRootLogin no
+      PasswordAuthentication no
+      X11Forwarding no
+      AllowTcpForwarding no
+
+runcmd:
+  - echo "Starting initialization script at $(date)"
+  - mkdir -p /root/scripts
+  - chmod 0700 /root/scripts
+  - systemctl enable fail2ban
+  - systemctl start fail2ban
+  - sleep 15
+  - bash -x /root/scripts/ts-startup.sh
+  - echo "Installation completed at $(date)"
+  - sed -i 's/^%sudo.*/%sudo ALL=(ALL) NOPASSWD:ALL/' /etc/sudoers
+  - passwd -l root
+  - systemctl restart sshd

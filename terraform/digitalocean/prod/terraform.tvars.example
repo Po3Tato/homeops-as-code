@@ -1,0 +1,10 @@
+ssh_key_name  = "admin-ssh-key"
+user = "admin"
+project_id    = "project-id-here"
+region        = "nyc1"
+droplet_count = 1
+droplet_tags = ["prod", "demo"]
+
+# Sensitive values (do not fill these in the example)
+do_token = "your-do-token"
+ts_auth  = "your-tailscale-auth-key"
